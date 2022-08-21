@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en"
+xmlns:xlink="http://www.w3.org/1999/xlink" id="prism-svg">
+    <g id="prism-line">
+            <line x1="0" x2="50" y1="25" y2="25" stroke="black" />
+    </g>
+    <polygon points="25,50 50,0 75,50" fill="black"/>
+</svg>
