@@ -1,0 +1,35 @@
+html,
+body {
+    margin: 0;
+    box-sizing: border-box;
+    background-color: black;
+    overflow: hidden;
+}
+
+#prism-svg {
+    height: 100vh;
+    width: 100vw;
+}
+
+#prism-glass {
+    filter: drop-shadow(0 0 1pt rgba(255, 255, 255, 0.75));
+}
+
+.glow {
+    filter: drop-shadow(0 0 1mm rgba(255, 255, 255, 0.75));
+    animation: glow-animation 5s infinite alternate;
+}
+
+.draggable {
+    cursor: grab;
+}
+
+@keyframes glow-animation {
+    from {
+        filter: drop-shadow(0 0 5pt rgba(255, 255, 255, 0.75));
+    }
+
+    to {
+        filter: drop-shadow(0 0 1pt rgba(119, 119, 119, 0.75));
+    }
+}

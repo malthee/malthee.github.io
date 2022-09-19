@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>malthee.github.io Prism</title>
+    <meta name="description" content="A prism sim inspired by Pink Floyd ">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <svg id="prism-svg" viewBox="0,-10,300,110" xmlns="http://www.w3.org/2000/svg" xml:lang="en">
+        <polygon id="prism-glass" points="100,86.6 150,0 200,86.6" stroke="#8eecf3" stroke-width="1.5" />
+        <g class="glow" fill="white" stroke="white">
+            <line id="incident-ray" class="draggable" x1="0" x2="125" y1="50" y2="50" fill="white" stroke="white" stroke-width="5.5" />
+            <ellipse id="incident-start" class="draggable" cx="1" cy="50" rx="3" ry="3">
+                <animate attributeName="fill" values="white;#f0f0f0;white" dur="7s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse id="incident-end" class="draggable" cx="125" cy="50" rx="3" ry="3">
+                <animate attributeName="fill" values="white;#f0f0f0;white" dur="7s" repeatCount="indefinite" />
+            </ellipse>
+        </g>
+        <g id="prism-refraction">
+            <polygon id="refraction-red" fill="red" />
+            <polygon id="refraction-orange" fill="orange" />
+            <polygon id="refraction-yellow" fill="yellow" />
+            <polygon id="refraction-green" fill="green" />
+            <polygon id="refraction-blue" fill="blue" />
+            <polygon id="refraction-indigo" fill="indigo" />
+            <polygon id="refraction-violet" fill="violet" />
+        </g>
+    </svg>
+    <script src="prism-logic.js" async defer></script>
+</body>
+
+</html>
