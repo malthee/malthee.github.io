@@ -16,12 +16,11 @@ body {
 }
 
 .glow {
-    filter: drop-shadow(0 0 1mm rgba(255, 255, 255, 0.75));
     animation: glow-animation 5s infinite alternate;
 }
 
 .draggable {
-    cursor: grab;
+    cursor: move;
 }
 
 @keyframes glow-animation {
