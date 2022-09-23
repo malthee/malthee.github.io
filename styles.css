@@ -15,6 +15,10 @@ body {
     filter: drop-shadow(0 0 1pt rgba(255, 255, 255, 0.75));
 }
 
+#prism-refraction{
+    filter: blur(0.5pt);
+}
+
 .glow {
     animation: glow-animation 5s infinite alternate;
 }
