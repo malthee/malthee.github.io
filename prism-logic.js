@@ -376,10 +376,13 @@ class Refraction {
 
 (function () {
     /**
-     * @type {SVGElement}
-     */
+    * @type {SVGElement}
+    */
     let selectedDragElement = null;
     let dragOffset = { cx: 0, cy: 0, y1: 0, y2: 0 };
+
+    // Remove fallback content if JavaScript could not be executed.
+    document.getElementById('browser-unsupported').classList.add('d-none');
 
     const svg = document.getElementById('prism-svg');
     const prism = new Prism(150, 0, 100);
@@ -389,7 +392,7 @@ class Refraction {
     incidentRay.draw();
     const refraction = new Refraction(incidentRay, prism);
     refraction.draw();
-
+    svg.classList.remove('d-none'); // Svg is fully drawn, able to display
 
     function initEventHandling() {
         // Event handling of incident ray movement

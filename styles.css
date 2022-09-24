@@ -4,6 +4,7 @@ body {
     box-sizing: border-box;
     background-color: black;
     overflow: hidden;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
 #prism-svg {
@@ -15,7 +16,7 @@ body {
     filter: drop-shadow(0 0 1pt rgba(255, 255, 255, 0.75));
 }
 
-#prism-refraction{
+#prism-refraction {
     filter: blur(0.5pt);
 }
 
@@ -25,6 +26,17 @@ body {
 
 .draggable {
     cursor: move;
+}
+
+.d-none{
+    display: none !important;
+}
+
+.warning {
+    display: block;
+    height: 20px;
+    color: darkred;
+    text-align: center;
 }
 
 @keyframes glow-animation {
