@@ -4,7 +4,7 @@ body {
     box-sizing: border-box;
     background-color: black;
     overflow: hidden;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
 }
 
 #prism-svg {
@@ -17,7 +17,7 @@ body {
 }
 
 #prism-refraction {
-    filter: blur(0.5pt);
+    filter: blur(0.6pt);
 }
 
 .glow {
@@ -45,6 +45,6 @@ body {
     }
 
     to {
-        filter: drop-shadow(0 0 1pt rgba(119, 119, 119, 0.75));
+        filter: drop-shadow(0 0 1pt rgba(150, 150, 150, 0.75));
     }
 }

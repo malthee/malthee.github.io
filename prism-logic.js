@@ -2,7 +2,7 @@
  * Little prism project. Not intended to be 100% physically accurate ofc. physics are hard.
  * Thanks to https://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/ for svg dragging mechanics
  * and to Justin C. Rounds for the line intersection algorithm.
- * Lastly thanks to Willebrord Snellius for Snell's law.
+ * Lastly thanks to Willebrord Snellius for Snell's law and Augustin-Louis Cauchy for Cauchy's equation.
  */
 
 /**
@@ -107,8 +107,9 @@ class IncidentRay {
         let x2 = parseFloat(this.#rayElement.getAttribute('x2'));
 
         // Angle of line is calculated through its slope defined by the two points. 
-        let baseAngle = Math.atan((y2 - y1) / (x2 - x1));
-        return baseAngle * -1 + Math.PI / 6; // To get the incident angle along the prism normal 30 degrees is added.
+        const baseAngle = Math.atan((y2 - y1) / (x2 - x1));
+        // To get the incident angle along the prism normal 30 degrees is added and flipped if startX > endX.
+        return baseAngle * (x2 > x1 ? -1 : 1) + Math.PI / 6;
     }
 
     get startingPos() {
@@ -126,7 +127,28 @@ class IncidentRay {
     }
 
     get beamWidth() {
-        return this.#rayElement.getAttribute('stroke-width');
+        return parseFloat(this.#rayElement.getAttribute('stroke-width'));
+    }
+
+    set beamWidth(value) {
+        this.#rayElement.setAttribute('stroke-width', value);
+        const r = value / 2 + 0.5;
+        this.#startElement.setAttribute('cx', r);
+        this.#startElement.setAttribute('cy', r);
+        this.#endElement.setAttribute('cx', r);
+        this.#endElement.setAttribute('cy', r);
+    }
+
+    #isEndPositionValid(x, y) {
+        // End has to be right of start.
+        return x > this.startingPos.x + this.beamWidth &&
+            // And only between the prism coordinates.
+            y > this.#prism.topY + this.beamWidth / 2 && y < this.#prism.bottomY - this.beamWidth / 2;
+    }
+
+    #isStartPositionValid(x, y) {
+        // Start has to be left of infinite prism left side.
+        return x < this.#prism.bottomLeftPos.x - ((this.#prism.topX - this.#prism.bottomLeftPos.x) / (this.#prism.bottomY - this.#prism.topY)) * (y - this.#prism.bottomY);
     }
 
     /**
@@ -136,14 +158,7 @@ class IncidentRay {
      * @returns {bool} if position change was performed
      */
     tryMoveStart(x, y) {
-        // Start has to be in view, above prism bottom, to the left side of the prism and end.
-        if (y < this.#prism.topY && x >= this.#prism.topX ||
-            // Has to be left of end.
-            x >= parseFloat(this.#rayElement.getAttribute('x2')) - this.beamWidth ||
-            // Also left of prism.
-            y >= this.#prism.topY && y < this.#prism.bottomY && x >= this.#prism.getXPosOnLeftSide(y) ||
-            // Can be below prism but has to be on the left side.
-            y >= this.#prism.bottomY && x >= this.#prism.bottomLeftPos.x - ((this.#prism.topX - this.#prism.bottomLeftPos.x) / (this.#prism.bottomY - this.#prism.topY)) * (y - this.#prism.bottomY)) {
+        if (!this.#isStartPositionValid(x, y)) {
             return false;
         }
 
@@ -154,9 +169,6 @@ class IncidentRay {
         return true;
     }
 
-    // TODO angle check other side still right
-    // check if move possib with start and end
-
     /**
      * Tries to move the end of the incident ray.
      * @param {number} y 
@@ -164,20 +176,16 @@ class IncidentRay {
      */
     tryMoveEnd(y) {
         // End moves alongside left of prism.
-        // If mouse is higher up or lower than the prism, lock end to nearest point.
-        let newY = y <= this.#prism.topY + this.beamWidth / 2 ? this.#prism.topY + this.beamWidth / 2 :
-            y >= this.#prism.bottomY - this.beamWidth / 2 ? this.#prism.bottomY - this.beamWidth / 2 : y;
-        let x = this.#prism.getXPosOnLeftSide(newY);
+        const x = this.#prism.getXPosOnLeftSide(y);
 
-        // TODO do not allow start before end mby max angle
-        if (this.#prism.getXPosOnLeftSide(newY) <= parseFloat(this.#startElement.getAttribute('cx')) + this.beamWidth || this.#prism.getXPosOnLeftSide(y) === -1) {
+        if (!this.#isEndPositionValid(x, y)) {
             return false;
         }
 
         this.#endElement.setAttribute('cx', x);
-        this.#endElement.setAttribute('cy', newY);
+        this.#endElement.setAttribute('cy', y);
         this.#rayElement.setAttribute('x2', x);
-        this.#rayElement.setAttribute('y2', newY);
+        this.#rayElement.setAttribute('y2', y);
         return true;
     }
 
@@ -188,13 +196,18 @@ class IncidentRay {
      * @returns {bool} if position change was performed
      */
     tryMoveRay(y1, y2) {
-        if (!this.tryMoveEnd(y2)) {
+        const endX = this.#prism.getXPosOnLeftSide(y2);
+
+        if (!this.#isStartPositionValid(this.startingPos.x, y1) || !this.#isEndPositionValid(endX, y2)) {
             return false;
         }
 
         this.#startElement.setAttribute('cy', y1);
+        this.#endElement.setAttribute('cx', endX);
+        this.#endElement.setAttribute('cy', y2);
         this.#rayElement.setAttribute('y1', y1);
         this.#rayElement.setAttribute('y2', y2);
+        this.#rayElement.setAttribute('x2', endX);
         return true;
     }
 
@@ -202,10 +215,10 @@ class IncidentRay {
      * Initially draws the incident ray center of the prism. 
      */
     draw() {
-        let startPosY = this.#prism.topY + this.#prism.height;
-        let endPosY = this.#prism.topY + this.#prism.height / 2;
-        let startPosX = this.#startElement.getAttribute('rx');
-        let endPosX = this.#prism.getXPosOnLeftSide(endPosY);
+        const startPosY = this.#prism.topY + this.#prism.height;
+        const endPosY = this.#prism.topY + this.#prism.height / 2;
+        const startPosX = this.#startElement.getAttribute('rx');
+        const endPosX = this.#prism.getXPosOnLeftSide(endPosY);
 
         this.#startElement.setAttribute('cx', startPosX);
         this.#startElement.setAttribute('cy', startPosY);
@@ -234,6 +247,16 @@ class Refraction {
     #incidentRay
     #prism
 
+    // Constants taken from https://en.wikipedia.org/wiki/Cauchy%27s_equation
+    /**
+     * Material constant A of flint glass.
+     */
+    static prismAConstant = 1.67;
+    /**
+    * Material constant b of flint glass.
+    */
+    static prismBConstant = 0.00743;
+
     /**
      * 
      * @param {IncidentRay} incidentRay 
@@ -244,22 +267,6 @@ class Refraction {
         this.#prism = prism;
     }
 
-    // Constants taken from https://en.wikipedia.org/wiki/Cauchy%27s_equation
-    /**
-     * Material constant A of flint glass.
-     */
-    static get prismAConstant() {
-        return 1.67;
-    }
-
-    /**
-     * Material constant b of flint glass.
-     */
-    static get prismBConstant() {
-        return 0.00743;
-    }
-
-    // Calculating n in snell's law: n = A + b/wv^2
     /**
      * n value of red light entering the prism. 
      */
@@ -268,33 +275,47 @@ class Refraction {
     }
 
     /**
+     * Calculates the refractive index using Cauchy's equation.
+     * @param {number} waveLength 
+     * @returns 
+     */
+    static cauchysEquationN(waveLength) {
+        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(waveLength, 2));
+    }
+
+    /**
     * n value of violet light entering the prism. 
     */
     static get nVioletPrism() {
         return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(0.41, 2));
     }
-
+ 
+    /**
+     * Draws the Refraction using data from the IncidentRay and Prism.
+     */
     draw() {
-        let rayEnd = this.#incidentRay.endPos;
-        let halfBeamWidth = this.#incidentRay.beamWidth / 2;
+        const rayEnd = this.#incidentRay.endPos;
+        const halfBeamWidth = this.#incidentRay.beamWidth / 2;
         // Since the beam is thick the top part will be used to calculate red, bottom part violet.
-        let beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
-        let refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
+        const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
+        const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
             refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
 
         // Refraction inside of the prism.
-        let redPrismEnd = this.#findPrismExitPoint(refractionStart, Refraction.nRedPrism),
+        const redPrismEnd = this.#findPrismExitPoint(refractionStart, Refraction.nRedPrism),
             violetPrismEnd = this.#findPrismExitPoint(refractionEnd, Refraction.nVioletPrism);
-        let refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
+        // TODO verify and fix drawing refraction on bottom of prism
+
+        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
             refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
             refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
             refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
 
         // Refraction outside of the prism ends at width of the viewport.
-        let endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
-        let redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nRedPrism)) },
+        const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
+        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nRedPrism)) },
             violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nVioletPrism)) }
-        let endDeviationY = (violetEnd.y - redEnd.y) / 7;
+        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
 
         for (let i = 0; i < this.#refractions.length; i++) {
             const refraction = this.#refractions[i];
@@ -313,8 +334,8 @@ class Refraction {
      * @param {number} n refraction index
      */
     #outAngleNormalized(n) {
-        let sinIncident = Math.sin(this.#incidentRay.incidentAngle);
-        let angle = (Math.sqrt(3) / 2)
+        const sinIncident = Math.sin(this.#incidentRay.incidentAngle);
+        const angle = (Math.sqrt(3) / 2)
             * Math.sqrt(Math.pow(n, 2) - Math.pow(sinIncident, 2))
             - sinIncident / 2;
         return angle - Math.PI / 6; // Adding 30 deg to inverse to get angle on canvas.
@@ -336,42 +357,63 @@ class Refraction {
      * @returns {{x, y, onPrism}} position of intersection and if it is on the prism side
      */
     #findPrismExitPoint(rayStart, n) {
-        // Justin C. Rounds algorithm for finding intersection of two lines
-        // If the lines intersect, the result contains the x and y of the intersection (treating the lines as infinite) 
-        let rightSideStart = { x: this.#prism.topX, y: this.#prism.topY },
+        // Ray may exit either bottom or right side of prism.  
+        const bottomSideStart = this.#prism.bottomLeftPos,
+            bottomSideEnd = this.#prism.bottomRightPos,
+            rightSideStart = { x: this.#prism.topX, y: this.#prism.topY },
             rightSideEnd = this.#prism.bottomRightPos,
             rayTargetDirection = { x: rayStart.x + 1, y: rayStart.y + Math.tan(this.#refractionAngleNormalized(n)) };
 
-        let denominator, a, b, numerator1, numerator2, result = {
+        // Check for bottom intersection first as it is closer to the ray, otherwise use right side intersection.
+        const bottomIntersection = Refraction.checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
+        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : Refraction.checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
+
+        return {
+            x: chosenIntersection.x,
+            y: chosenIntersection.y,
+            isBottom: bottomIntersection == chosenIntersection
+        }
+    }
+
+    /**
+     * Checks if two lines defined by two points intersect.
+     * Justin C. Rounds algorithm.
+     * @param {{x, y}} line1StartPos 
+     * @param {{x, y}} line1EndPos 
+     * @param {{x, y}} line2StartPos 
+     * @param {{x, y}} line2EndPos 
+     * @returns {{x, y, isIntersect}} position and flag if infinitely cast line 1 intersects line 2
+     */
+    static checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
+        // If the lines intersect, the result contains the x and y of the intersection treating them as infinite lines.
+        var denominator, a, b, numerator1, numerator2, result = {
             x: null,
             y: null,
-            onPrism: false
+            isIntersect: false
         };
 
-        denominator = ((rightSideEnd.y - rightSideStart.y) * (rayTargetDirection.x - rayStart.x))
-            - ((rightSideEnd.x - rightSideStart.x) * (rayTargetDirection.y - rayStart.y));
+        denominator = ((line2EndPos.y - line2StartPos.y) * (line1EndPos.x - line1StartPos.x)) - ((line2EndPos.x - line2StartPos.x) * (line1EndPos.y - line1StartPos.y));
         if (denominator == 0) {
             return result;
         }
-
-        a = rayStart.y - rightSideStart.y;
-        b = rayStart.x - rightSideStart.x;
-        numerator1 = ((rightSideEnd.x - rightSideStart.x) * a) - ((rightSideEnd.y - rightSideStart.y) * b);
-        numerator2 = ((rayTargetDirection.x - rayStart.x) * a) - ((rayTargetDirection.y - rayStart.y) * b);
+        a = line1StartPos.y - line2StartPos.y;
+        b = line1StartPos.x - line2StartPos.x;
+        numerator1 = ((line2EndPos.x - line2StartPos.x) * a) - ((line2EndPos.y - line2StartPos.y) * b);
+        numerator2 = ((line1EndPos.x - line1StartPos.x) * a) - ((line1EndPos.y - line1StartPos.y) * b);
         a = numerator1 / denominator;
         b = numerator2 / denominator;
 
         // If we cast these lines infinitely in both directions, they intersect here:
-        result.x = rayStart.x + (a * (rayTargetDirection.x - rayStart.x));
-        result.y = rayStart.y + (a * (rayTargetDirection.y - rayStart.y));
+        result.x = line1StartPos.x + (a * (line1EndPos.x - line1StartPos.x));
+        result.y = line1StartPos.y + (a * (line1EndPos.y - line1StartPos.y));
 
-        // Assuming the ray is infinite, right side of prism intersects with it if:
+        // Line 1 is infinite, it intersects line 2 if:
         if (b > 0 && b < 1) {
-            result.onPrism = true;
+            result.isIntersect = true;
         }
 
         return result;
-    }
+    };
 }
 
 (function () {
@@ -471,7 +513,7 @@ class Refraction {
         }
     }
 
-    function endDrag(evt) {
+    function endDrag() {
         selectedDragElement = null;
     }
 })();
