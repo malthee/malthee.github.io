@@ -238,14 +238,13 @@ class Refraction {
     #prism
 
     // Constants taken from https://en.wikipedia.org/wiki/Cauchy%27s_equation
-    /**
-     * Material constant A of flint glass.
-     */
-    static prismAConstant = 1.67;
-    /**
-    * Material constant b of flint glass.
-    */
-    static prismBConstant = 0.00743;
+    // Material constant A of flint glass.
+    #prismAConstant = 1.67;
+    // Material constant b of flint glass.
+    #prismBConstant = 0.00743;
+    // Refractive indices of light entering the prism
+    #nRed
+    #nViolet
 
     /**
      * 
@@ -258,13 +257,30 @@ class Refraction {
         this.#prism = prism;
         this.#refractionGroup = refractionGroup;
         this.#refractions = this.#refractionGroup.children;
+        this.#setRefractiveIndices();
     }
 
-    /**
-     * n value of red light entering the prism. 
-     */
-    static get nRedPrism() {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(0.68, 2));
+    get prismAConstant() {
+        return this.#prismAConstant;
+    }
+
+    set prismAConstant(value) {
+        this.#prismAConstant = value;
+        this.#setRefractiveIndices();
+    }
+
+    get prismBConstant() {
+        return this.#prismBConstant;
+    }
+
+    set prismBConstant(value) {
+        this.#prismBConstant = value;
+        this.#setRefractiveIndices();
+    }
+
+    #setRefractiveIndices() {
+        this.#nRed = this.#cauchysEquationN(0.68);
+        this.#nViolet = this.#cauchysEquationN(0.41);
     }
 
     /**
@@ -272,54 +288,8 @@ class Refraction {
      * @param {number} waveLength 
      * @returns 
      */
-    static cauchysEquationN(waveLength) {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(waveLength, 2));
-    }
-
-    /**
-    * n value of violet light entering the prism. 
-    */
-    static get nVioletPrism() {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(0.41, 2));
-    }
-
-    /**
-     * Draws the Refraction using data from the IncidentRay and Prism.
-     */
-    draw() {
-        const rayEnd = this.#incidentRay.endPos;
-        const halfBeamWidth = this.#incidentRay.beamWidth / 2;
-        // Since the beam is thick the top part will be used to calculate red, bottom part violet.
-        const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
-        const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
-            refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
-
-        // Refraction inside of the prism.
-        const redPrismEnd = this.#findPrismExitPoint(refractionStart, Refraction.nRedPrism),
-            violetPrismEnd = this.#findPrismExitPoint(refractionEnd, Refraction.nVioletPrism);
-        // TODO verify and fix drawing refraction on bottom of prism
-
-        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
-            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
-            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
-            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
-
-        // Refraction outside of the prism ends at width of the viewport.
-        const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
-        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nRedPrism)) },
-            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nVioletPrism)) }
-        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
-
-        for (let i = 0; i < this.#refractions.length; i++) {
-            const refraction = this.#refractions[i];
-            // Interpolating points from red to violet. Points start at the incident ray, going to the other prism side, to the end of the viewport and back.
-            refraction.setAttribute('points', `${refractionStart.x + refractStartDeviationX * i},${refractionStart.y + refractStartDeviationY * i} 
-            ${redPrismEnd.x + refractEndDeviationX * i},${redPrismEnd.y + refractEndDeviationY * i} 
-            ${endX},${redEnd.y + endDeviationY * i} 
-            ${endX},${redEnd.y + endDeviationY * (i + 1)} 
-            ${redPrismEnd.x + refractEndDeviationX * (i + 1)},${redPrismEnd.y + refractEndDeviationY * (i + 1)} 
-            ${refractionStart.x + refractStartDeviationX * (i + 1)},${refractionStart.y + refractStartDeviationY * (i + 1)}`);
-        }
+    #cauchysEquationN(waveLength) {
+        return this.prismAConstant + (this.prismBConstant / Math.pow(waveLength, 2));
     }
 
     /**
@@ -358,8 +328,8 @@ class Refraction {
             rayTargetDirection = { x: rayStart.x + 1, y: rayStart.y + Math.tan(this.#refractionAngleNormalized(n)) };
 
         // Check for bottom intersection first as it is closer to the ray, otherwise use right side intersection.
-        const bottomIntersection = Refraction.checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
-        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : Refraction.checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
+        const bottomIntersection = this.#checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
+        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : this.#checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
 
         return {
             x: chosenIntersection.x,
@@ -377,7 +347,7 @@ class Refraction {
      * @param {{x, y}} line2EndPos 
      * @returns {{x, y, isIntersect}} position and flag if infinitely cast line 1 intersects line 2
      */
-    static checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
+    #checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
         // If the lines intersect, the result contains the x and y of the intersection treating them as infinite lines.
         var denominator, a, b, numerator1, numerator2, result = {
             x: null,
@@ -406,7 +376,46 @@ class Refraction {
         }
 
         return result;
-    };
+    }
+
+    /**
+    * Draws the Refraction using data from the IncidentRay and Prism.
+    */
+    draw() {
+        const rayEnd = this.#incidentRay.endPos;
+        const halfBeamWidth = this.#incidentRay.beamWidth / 2;
+        // Since the beam is thick the top part will be used to calculate red, bottom part violet.
+        const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
+        const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
+            refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
+
+        // Refraction inside of the prism.
+        const redPrismEnd = this.#findPrismExitPoint(refractionStart, this.#nRed),
+            violetPrismEnd = this.#findPrismExitPoint(refractionEnd, this.#nViolet);
+        // TODO verify and fix drawing refraction on bottom of prism
+
+        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
+            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
+            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
+            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
+
+        // Refraction outside of the prism ends at width of the viewport.
+        const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
+        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nRed)) },
+            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nViolet)) }
+        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
+
+        for (let i = 0; i < this.#refractions.length; i++) {
+            const refraction = this.#refractions[i];
+            // Interpolating points from red to violet. Points start at the incident ray, going to the other prism side, to the end of the viewport and back.
+            refraction.setAttribute('points', `${refractionStart.x + refractStartDeviationX * i},${refractionStart.y + refractStartDeviationY * i} 
+                ${redPrismEnd.x + refractEndDeviationX * i},${redPrismEnd.y + refractEndDeviationY * i} 
+                ${endX},${redEnd.y + endDeviationY * i} 
+                ${endX},${redEnd.y + endDeviationY * (i + 1)} 
+                ${redPrismEnd.x + refractEndDeviationX * (i + 1)},${redPrismEnd.y + refractEndDeviationY * (i + 1)} 
+                ${refractionStart.x + refractStartDeviationX * (i + 1)},${refractionStart.y + refractStartDeviationY * (i + 1)}`);
+        }
+    }
 }
 
 (function () {
