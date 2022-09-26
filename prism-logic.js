@@ -9,19 +9,20 @@
  * A equilateral triangle with 60° angles. 
  */
 class Prism {
-    #prismElement = document.getElementById('prism-glass');
+    #prismElement;
 
     /**
      * 
      * @param {number} topX 
      * @param {number} topY 
      * @param {number} height 
-     * @param {string} id html id 
+     * @param {SVGElement} prismElement  
      */
-    constructor(topX, topY, height) {
+    constructor(topX, topY, height, prismElement) {
         this.topX = topX;
         this.topY = topY;
         this.height = height;
+        this.#prismElement = prismElement;
     }
 
     /**
@@ -86,17 +87,24 @@ class Prism {
 class IncidentRay {
     #startPos
     #endPos
-    #rayElement = document.getElementById('incident-ray');
-    #startElement = document.getElementById('incident-start');
-    #endElement = document.getElementById('incident-end');
     #prism
+
+    #startElement
+    #rayElement
+    #endElement
 
     /**
      * 
      * @param {Prism} prism 
+     * @param {SVGElement} startElement 
+     * @param {SVGElement} rayElement 
+     * @param {SVGElement} endElement 
      */
-    constructor(prism) {
+    constructor(prism, startElement, rayElement, endElement) {
         this.#prism = prism;
+        this.#startElement = startElement;
+        this.#rayElement = rayElement;
+        this.#endElement = endElement;
         // Start ray bottom to center of prism.
         const endPosY = this.#prism.topY + this.#prism.height / 2;
         this.#startPos = { x: parseFloat(this.#startElement.getAttribute('rx')), y: this.#prism.topY + this.#prism.height };
@@ -223,14 +231,8 @@ class IncidentRay {
  * The reaction of white light entering a prism.
  */
 class Refraction {
-    #refractions = [document.getElementById('refraction-red'),
-    document.getElementById('refraction-orange'),
-    document.getElementById('refraction-yellow'),
-    document.getElementById('refraction-green'),
-    document.getElementById('refraction-blue'),
-    document.getElementById('refraction-indigo'),
-    document.getElementById('refraction-violet')]
-    #refractionGroup = document.getElementById('prism-refraction');
+    #refractions
+    #refractionGroup
 
     #incidentRay
     #prism
@@ -249,10 +251,13 @@ class Refraction {
      * 
      * @param {IncidentRay} incidentRay 
      * @param {Prism} prism 
+     * @param {SVGElement} refractionGroup Group element containing polygons for visible colors. 
      */
-    constructor(incidentRay, prism) {
+    constructor(incidentRay, prism, refractionGroup) {
         this.#incidentRay = incidentRay;
         this.#prism = prism;
+        this.#refractionGroup = refractionGroup;
+        this.#refractions = this.#refractionGroup.children;
     }
 
     /**
@@ -409,20 +414,20 @@ class Refraction {
     * @type {SVGElement}
     */
     let selectedDragElement = null;
-    let dragOffset = { cx: 0, cy: 0, y1: 0, y2: 0 };
+    let dragOffset = { x1: 0, x2: 0, y1: 0, y2: 0 };
 
     // Remove fallback content if JavaScript could not be executed.
     document.getElementById('browser-unsupported').classList.add('d-none');
 
     const svg = document.getElementById('prism-svg');
-    const prism = new Prism(150, 0, 100);
+    const prism = new Prism(150, 0, 100, document.getElementById('prism-glass'));
     prism.draw();
     initEventHandling();
-    const incidentRay = new IncidentRay(prism);
+    const incidentRay = new IncidentRay(prism, document.getElementById('incident-start'), document.getElementById('incident-ray'), document.getElementById('incident-end'));
     incidentRay.draw();
-    const refraction = new Refraction(incidentRay, prism);
+    const refraction = new Refraction(incidentRay, prism, document.getElementById('prism-refraction'));
     refraction.draw();
-    svg.classList.remove('d-none'); // Svg is fully drawn, able to display
+    svg.classList.remove('d-none'); // Svg is fully drawn, able to display.
 
     function initEventHandling() {
         // Event handling of incident ray movement
@@ -459,16 +464,12 @@ class Refraction {
         selectedDragElement = evt.target;
         let mousePos = getMousePosition(evt);
 
-        if (selectedDragElement.id === 'incident-ray') {
-            // Track offset for both y positions of the line.
-            dragOffset.y1 = mousePos.y - parseFloat(selectedDragElement.getAttribute('y1'));
-            dragOffset.y2 = mousePos.y - parseFloat(selectedDragElement.getAttribute('y2'));
-        } else if (selectedDragElement.tagName === 'ellipse') {
-            dragOffset.cx = mousePos.x - parseFloat(selectedDragElement.getAttribute('cx'));
-            dragOffset.cy = mousePos.y - parseFloat(selectedDragElement.getAttribute('cy'));
-        } else {
-            throw new Error('SVG Element not supported in drag.');
-        }
+        // Track offset for start and end positions of line.
+        dragOffset.y1 = mousePos.y - incidentRay.startPos.y;
+        dragOffset.y2 = mousePos.y - incidentRay.endPos.y;
+        dragOffset.x1 = mousePos.x - incidentRay.startPos.x;
+        dragOffset.x2 = mousePos.x - incidentRay.endPos.x;
+
     }
 
     function drag(evt) {
@@ -477,21 +478,18 @@ class Refraction {
         }
 
         evt.preventDefault();
-        let mousePos = getMousePosition(evt);
+        const mousePos = getMousePosition(evt);
         let moved = false;
 
         if (selectedDragElement.id === 'incident-ray') {
-            let newY1 = mousePos.y - dragOffset.y1, newY2 = mousePos.y - dragOffset.y2;
+            const newY1 = mousePos.y - dragOffset.y1, newY2 = mousePos.y - dragOffset.y2;
             moved = incidentRay.tryMoveRay(newY1, newY2);
-        } else if (selectedDragElement.tagName === 'ellipse') {
-            let newCx = mousePos.x - dragOffset.cx, newCy = mousePos.y - dragOffset.cy;
-            if (selectedDragElement.id === 'incident-start') {
-                moved = incidentRay.tryMoveStart(newCx, newCy);
-            } else if (selectedDragElement.id === 'incident-end') {
-                moved = incidentRay.tryMoveEnd(newCy);
-            } else {
-                throw new Error('SVG Element not supported in drag.');
-            }
+        } else if (selectedDragElement.id === 'incident-start') {
+            const newCx = mousePos.x - dragOffset.x1, newCy = mousePos.y - dragOffset.y1;
+            moved = incidentRay.tryMoveStart(newCx, newCy);
+        } else if (selectedDragElement.id === 'incident-end') {
+            const newCy = mousePos.y - dragOffset.y2;
+            moved = incidentRay.tryMoveEnd(newCy);
         } else {
             throw new Error('SVG Element not supported in drag.');
         }
