@@ -9,33 +9,26 @@
  * A equilateral triangle with 60° angles. 
  */
 class Prism {
-    #prismElement = document.getElementById('prism-glass');
+    #prismElement;
+
+    /**
+     * Gets the angle of the prism in rad (60deg).
+     */
+    #angle = Math.PI / 3;
+    #angleTan = Math.tan(this.#angle);
 
     /**
      * 
      * @param {number} topX 
      * @param {number} topY 
      * @param {number} height 
-     * @param {string} id html id 
+     * @param {SVGElement} prismElement  
      */
-    constructor(topX, topY, height) {
+    constructor(topX, topY, height, prismElement) {
         this.topX = topX;
         this.topY = topY;
         this.height = height;
-    }
-
-    /**
-     * Gets the angle of the prism in rad (60deg).
-     */
-    static get angle() {
-        return Math.PI / 3;
-    }
-
-    /**
-     * Gets the Math.tan() of the prism angle
-     */
-    static get angleTan() {
-        return Math.tan(Math.PI / 3);
+        this.#prismElement = prismElement;
     }
 
     /**
@@ -49,14 +42,14 @@ class Prism {
     * Gets the bottom right position of the prism.
     */
     get bottomRightPos() {
-        return { x: this.topX + this.height / Prism.angleTan, y: this.topY + this.height }
+        return { x: this.topX + this.height / this.#angleTan, y: this.topY + this.height }
     }
 
     /**
     * Gets the bottom left position of the prism.
     */
     get bottomLeftPos() {
-        return { x: this.topX - this.height / Prism.angleTan, y: this.topY + this.height }
+        return { x: this.topX - this.height / this.#angleTan, y: this.topY + this.height }
     }
 
     /**
@@ -66,7 +59,7 @@ class Prism {
      */
     getXPosOnLeftSide(yPos) {
         return yPos > this.bottomY || yPos < this.topY ?
-            -1 : this.topX - ((yPos - this.topY) / Prism.angleTan);
+            -1 : this.topX - ((yPos - this.topY) / this.#angleTan);
     }
 
     /**
@@ -84,27 +77,40 @@ class Prism {
  * White light going into a prism.
  */
 class IncidentRay {
-    #rayElement = document.getElementById('incident-ray');
-    #startElement = document.getElementById('incident-start');
-    #endElement = document.getElementById('incident-end');
+    #startPos
+    #endPos
     #prism
+
+    #startElement
+    #rayElement
+    #endElement
 
     /**
      * 
      * @param {Prism} prism 
+     * @param {SVGElement} startElement 
+     * @param {SVGElement} rayElement 
+     * @param {SVGElement} endElement 
      */
-    constructor(prism) {
+    constructor(prism, startElement, rayElement, endElement) {
         this.#prism = prism;
+        this.#startElement = startElement;
+        this.#rayElement = rayElement;
+        this.#endElement = endElement;
+        // Start ray bottom to center of prism.
+        const endPosY = this.#prism.topY + this.#prism.height / 2;
+        this.#startPos = { x: parseFloat(this.#startElement.getAttribute('rx')), y: this.#prism.topY + this.#prism.height };
+        this.#endPos = { x: this.#prism.getXPosOnLeftSide(endPosY), y: endPosY };
     }
 
     /**
      * Gets the incident angle of the incident ray in rad.
      */
     get incidentAngle() {
-        let y1 = parseFloat(this.#rayElement.getAttribute('y1'));
-        let y2 = parseFloat(this.#rayElement.getAttribute('y2'));
-        let x1 = parseFloat(this.#rayElement.getAttribute('x1'));
-        let x2 = parseFloat(this.#rayElement.getAttribute('x2'));
+        let y1 = this.#startPos.y,
+            y2 = this.#endPos.y,
+            x1 = this.#startPos.x,
+            x2 = this.#endPos.x;
 
         // Angle of line is calculated through its slope defined by the two points. 
         const baseAngle = Math.atan((y2 - y1) / (x2 - x1));
@@ -112,18 +118,12 @@ class IncidentRay {
         return baseAngle * (x2 > x1 ? -1 : 1) + Math.PI / 6;
     }
 
-    get startingPos() {
-        return {
-            x: parseFloat(this.#rayElement.getAttribute('x1')),
-            y: parseFloat(this.#rayElement.getAttribute('y1'))
-        }
+    get startPos() {
+        return this.#startPos;
     }
 
     get endPos() {
-        return {
-            x: parseFloat(this.#rayElement.getAttribute('x2')),
-            y: parseFloat(this.#rayElement.getAttribute('y2'))
-        }
+        return this.#endPos;
     }
 
     get beamWidth() {
@@ -141,7 +141,7 @@ class IncidentRay {
 
     #isEndPositionValid(x, y) {
         // End has to be right of start.
-        return x > this.startingPos.x + this.beamWidth &&
+        return x > this.#startPos.x + this.beamWidth &&
             // And only between the prism coordinates.
             y > this.#prism.topY + this.beamWidth / 2 && y < this.#prism.bottomY - this.beamWidth / 2;
     }
@@ -162,10 +162,8 @@ class IncidentRay {
             return false;
         }
 
-        this.#startElement.setAttribute('cx', x);
-        this.#startElement.setAttribute('cy', y);
-        this.#rayElement.setAttribute('x1', x);
-        this.#rayElement.setAttribute('y1', y);
+        this.#startPos.x = x;
+        this.#startPos.y = y;
         return true;
     }
 
@@ -182,10 +180,8 @@ class IncidentRay {
             return false;
         }
 
-        this.#endElement.setAttribute('cx', x);
-        this.#endElement.setAttribute('cy', y);
-        this.#rayElement.setAttribute('x2', x);
-        this.#rayElement.setAttribute('y2', y);
+        this.#endPos.y = y;
+        this.#endPos.x = x;
         return true;
     }
 
@@ -198,36 +194,28 @@ class IncidentRay {
     tryMoveRay(y1, y2) {
         const endX = this.#prism.getXPosOnLeftSide(y2);
 
-        if (!this.#isStartPositionValid(this.startingPos.x, y1) || !this.#isEndPositionValid(endX, y2)) {
+        if (!this.#isStartPositionValid(this.startPos.x, y1) || !this.#isEndPositionValid(endX, y2)) {
             return false;
         }
 
-        this.#startElement.setAttribute('cy', y1);
-        this.#endElement.setAttribute('cx', endX);
-        this.#endElement.setAttribute('cy', y2);
-        this.#rayElement.setAttribute('y1', y1);
-        this.#rayElement.setAttribute('y2', y2);
-        this.#rayElement.setAttribute('x2', endX);
+        this.#startPos.y = y1;
+        this.#endPos.y = y2;
+        this.#endPos.x = endX;
         return true;
     }
 
     /**
-     * Initially draws the incident ray center of the prism. 
+     * Draws the incident ray from the current start to end position.
      */
     draw() {
-        const startPosY = this.#prism.topY + this.#prism.height;
-        const endPosY = this.#prism.topY + this.#prism.height / 2;
-        const startPosX = this.#startElement.getAttribute('rx');
-        const endPosX = this.#prism.getXPosOnLeftSide(endPosY);
-
-        this.#startElement.setAttribute('cx', startPosX);
-        this.#startElement.setAttribute('cy', startPosY);
-        this.#rayElement.setAttribute('x1', startPosX);
-        this.#rayElement.setAttribute('y1', startPosY);
-        this.#rayElement.setAttribute('x2', endPosX);
-        this.#rayElement.setAttribute('y2', endPosY);
-        this.#endElement.setAttribute('cx', endPosX);
-        this.#endElement.setAttribute('cy', endPosY);
+        this.#startElement.setAttribute('cx', this.#startPos.x);
+        this.#startElement.setAttribute('cy', this.#startPos.y);
+        this.#rayElement.setAttribute('x1', this.#startPos.x);
+        this.#rayElement.setAttribute('y1', this.#startPos.y);
+        this.#rayElement.setAttribute('x2', this.#endPos.x);
+        this.#rayElement.setAttribute('y2', this.#endPos.y);
+        this.#endElement.setAttribute('cx', this.#endPos.x);
+        this.#endElement.setAttribute('cy', this.#endPos.y);
     }
 }
 
@@ -235,43 +223,56 @@ class IncidentRay {
  * The reaction of white light entering a prism.
  */
 class Refraction {
-    #refractions = [document.getElementById('refraction-red'),
-    document.getElementById('refraction-orange'),
-    document.getElementById('refraction-yellow'),
-    document.getElementById('refraction-green'),
-    document.getElementById('refraction-blue'),
-    document.getElementById('refraction-indigo'),
-    document.getElementById('refraction-violet')]
-    #refractionGroup = document.getElementById('prism-refraction');
+    #refractions
+    #refractionGroup
 
     #incidentRay
     #prism
 
     // Constants taken from https://en.wikipedia.org/wiki/Cauchy%27s_equation
-    /**
-     * Material constant A of flint glass.
-     */
-    static prismAConstant = 1.67;
-    /**
-    * Material constant b of flint glass.
-    */
-    static prismBConstant = 0.00743;
+    // Material constant A of flint glass.
+    #prismAConstant = 1.67;
+    // Material constant b of flint glass.
+    #prismBConstant = 0.00743;
+    // Refractive indices of light entering the prism
+    #nRed
+    #nViolet
 
     /**
      * 
      * @param {IncidentRay} incidentRay 
      * @param {Prism} prism 
+     * @param {SVGElement} refractionGroup Group element containing polygons for visible colors. 
      */
-    constructor(incidentRay, prism) {
+    constructor(incidentRay, prism, refractionGroup) {
         this.#incidentRay = incidentRay;
         this.#prism = prism;
+        this.#refractionGroup = refractionGroup;
+        this.#refractions = this.#refractionGroup.children;
+        this.#setRefractiveIndices();
     }
 
-    /**
-     * n value of red light entering the prism. 
-     */
-    static get nRedPrism() {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(0.68, 2));
+    get prismAConstant() {
+        return this.#prismAConstant;
+    }
+
+    set prismAConstant(value) {
+        this.#prismAConstant = value;
+        this.#setRefractiveIndices();
+    }
+
+    get prismBConstant() {
+        return this.#prismBConstant;
+    }
+
+    set prismBConstant(value) {
+        this.#prismBConstant = value;
+        this.#setRefractiveIndices();
+    }
+
+    #setRefractiveIndices() {
+        this.#nRed = this.#cauchysEquationN(0.68);
+        this.#nViolet = this.#cauchysEquationN(0.41);
     }
 
     /**
@@ -279,54 +280,8 @@ class Refraction {
      * @param {number} waveLength 
      * @returns 
      */
-    static cauchysEquationN(waveLength) {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(waveLength, 2));
-    }
-
-    /**
-    * n value of violet light entering the prism. 
-    */
-    static get nVioletPrism() {
-        return Refraction.prismAConstant + (Refraction.prismBConstant / Math.pow(0.41, 2));
-    }
- 
-    /**
-     * Draws the Refraction using data from the IncidentRay and Prism.
-     */
-    draw() {
-        const rayEnd = this.#incidentRay.endPos;
-        const halfBeamWidth = this.#incidentRay.beamWidth / 2;
-        // Since the beam is thick the top part will be used to calculate red, bottom part violet.
-        const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
-        const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
-            refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
-
-        // Refraction inside of the prism.
-        const redPrismEnd = this.#findPrismExitPoint(refractionStart, Refraction.nRedPrism),
-            violetPrismEnd = this.#findPrismExitPoint(refractionEnd, Refraction.nVioletPrism);
-        // TODO verify and fix drawing refraction on bottom of prism
-
-        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
-            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
-            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
-            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
-
-        // Refraction outside of the prism ends at width of the viewport.
-        const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
-        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nRedPrism)) },
-            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(Refraction.nVioletPrism)) }
-        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
-
-        for (let i = 0; i < this.#refractions.length; i++) {
-            const refraction = this.#refractions[i];
-            // Interpolating points from red to violet. Points start at the incident ray, going to the other prism side, to the end of the viewport and back.
-            refraction.setAttribute('points', `${refractionStart.x + refractStartDeviationX * i},${refractionStart.y + refractStartDeviationY * i} 
-            ${redPrismEnd.x + refractEndDeviationX * i},${redPrismEnd.y + refractEndDeviationY * i} 
-            ${endX},${redEnd.y + endDeviationY * i} 
-            ${endX},${redEnd.y + endDeviationY * (i + 1)} 
-            ${redPrismEnd.x + refractEndDeviationX * (i + 1)},${redPrismEnd.y + refractEndDeviationY * (i + 1)} 
-            ${refractionStart.x + refractStartDeviationX * (i + 1)},${refractionStart.y + refractStartDeviationY * (i + 1)}`);
-        }
+    #cauchysEquationN(waveLength) {
+        return this.prismAConstant + (this.prismBConstant / Math.pow(waveLength, 2));
     }
 
     /**
@@ -365,8 +320,8 @@ class Refraction {
             rayTargetDirection = { x: rayStart.x + 1, y: rayStart.y + Math.tan(this.#refractionAngleNormalized(n)) };
 
         // Check for bottom intersection first as it is closer to the ray, otherwise use right side intersection.
-        const bottomIntersection = Refraction.checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
-        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : Refraction.checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
+        const bottomIntersection = this.#checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
+        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : this.#checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
 
         return {
             x: chosenIntersection.x,
@@ -384,7 +339,7 @@ class Refraction {
      * @param {{x, y}} line2EndPos 
      * @returns {{x, y, isIntersect}} position and flag if infinitely cast line 1 intersects line 2
      */
-    static checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
+    #checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
         // If the lines intersect, the result contains the x and y of the intersection treating them as infinite lines.
         var denominator, a, b, numerator1, numerator2, result = {
             x: null,
@@ -413,7 +368,46 @@ class Refraction {
         }
 
         return result;
-    };
+    }
+
+    /**
+    * Draws the Refraction using data from the IncidentRay and Prism.
+    */
+    draw() {
+        const rayEnd = this.#incidentRay.endPos;
+        const halfBeamWidth = this.#incidentRay.beamWidth / 2;
+        // Since the beam is thick the top part will be used to calculate red, bottom part violet.
+        const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
+        const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
+            refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
+
+        // Refraction inside of the prism.
+        const redPrismEnd = this.#findPrismExitPoint(refractionStart, this.#nRed),
+            violetPrismEnd = this.#findPrismExitPoint(refractionEnd, this.#nViolet);
+        // TODO verify and fix drawing refraction on bottom of prism
+
+        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
+            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
+            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
+            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
+
+        // Refraction outside of the prism ends at width of the viewport.
+        const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
+        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nRed)) },
+            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nViolet)) }
+        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
+
+        for (let i = 0; i < this.#refractions.length; i++) {
+            const refraction = this.#refractions[i];
+            // Interpolating points from red to violet. Points start at the incident ray, going to the other prism side, to the end of the viewport and back.
+            refraction.setAttribute('points', `${refractionStart.x + refractStartDeviationX * i},${refractionStart.y + refractStartDeviationY * i} 
+                ${redPrismEnd.x + refractEndDeviationX * i},${redPrismEnd.y + refractEndDeviationY * i} 
+                ${endX},${redEnd.y + endDeviationY * i} 
+                ${endX},${redEnd.y + endDeviationY * (i + 1)} 
+                ${redPrismEnd.x + refractEndDeviationX * (i + 1)},${redPrismEnd.y + refractEndDeviationY * (i + 1)} 
+                ${refractionStart.x + refractStartDeviationX * (i + 1)},${refractionStart.y + refractStartDeviationY * (i + 1)}`);
+        }
+    }
 }
 
 (function () {
@@ -421,20 +415,20 @@ class Refraction {
     * @type {SVGElement}
     */
     let selectedDragElement = null;
-    let dragOffset = { cx: 0, cy: 0, y1: 0, y2: 0 };
+    let dragOffset = { x1: 0, x2: 0, y1: 0, y2: 0 };
 
     // Remove fallback content if JavaScript could not be executed.
     document.getElementById('browser-unsupported').classList.add('d-none');
 
     const svg = document.getElementById('prism-svg');
-    const prism = new Prism(150, 0, 100);
+    const prism = new Prism(150, 0, 100, document.getElementById('prism-glass'));
     prism.draw();
-    initEventHandling();
-    const incidentRay = new IncidentRay(prism);
+    const incidentRay = new IncidentRay(prism, document.getElementById('incident-start'), document.getElementById('incident-ray'), document.getElementById('incident-end'));
     incidentRay.draw();
-    const refraction = new Refraction(incidentRay, prism);
+    const refraction = new Refraction(incidentRay, prism, document.getElementById('prism-refraction'));
     refraction.draw();
-    svg.classList.remove('d-none'); // Svg is fully drawn, able to display
+    initEventHandling();
+    svg.classList.remove('d-none'); // Svg is fully drawn, able to display.
 
     function initEventHandling() {
         // Event handling of incident ray movement
@@ -471,16 +465,12 @@ class Refraction {
         selectedDragElement = evt.target;
         let mousePos = getMousePosition(evt);
 
-        if (selectedDragElement.id === 'incident-ray') {
-            // Track offset for both y positions of the line.
-            dragOffset.y1 = mousePos.y - parseFloat(selectedDragElement.getAttribute('y1'));
-            dragOffset.y2 = mousePos.y - parseFloat(selectedDragElement.getAttribute('y2'));
-        } else if (selectedDragElement.tagName === 'ellipse') {
-            dragOffset.cx = mousePos.x - parseFloat(selectedDragElement.getAttribute('cx'));
-            dragOffset.cy = mousePos.y - parseFloat(selectedDragElement.getAttribute('cy'));
-        } else {
-            throw new Error('SVG Element not supported in drag.');
-        }
+        // Track offset for start and end positions of line.
+        dragOffset.y1 = mousePos.y - incidentRay.startPos.y;
+        dragOffset.y2 = mousePos.y - incidentRay.endPos.y;
+        dragOffset.x1 = mousePos.x - incidentRay.startPos.x;
+        dragOffset.x2 = mousePos.x - incidentRay.endPos.x;
+
     }
 
     function drag(evt) {
@@ -489,26 +479,24 @@ class Refraction {
         }
 
         evt.preventDefault();
-        let mousePos = getMousePosition(evt);
+        const mousePos = getMousePosition(evt);
         let moved = false;
 
         if (selectedDragElement.id === 'incident-ray') {
-            let newY1 = mousePos.y - dragOffset.y1, newY2 = mousePos.y - dragOffset.y2;
+            const newY1 = mousePos.y - dragOffset.y1, newY2 = mousePos.y - dragOffset.y2;
             moved = incidentRay.tryMoveRay(newY1, newY2);
-        } else if (selectedDragElement.tagName === 'ellipse') {
-            let newCx = mousePos.x - dragOffset.cx, newCy = mousePos.y - dragOffset.cy;
-            if (selectedDragElement.id === 'incident-start') {
-                moved = incidentRay.tryMoveStart(newCx, newCy);
-            } else if (selectedDragElement.id === 'incident-end') {
-                moved = incidentRay.tryMoveEnd(newCy);
-            } else {
-                throw new Error('SVG Element not supported in drag.');
-            }
+        } else if (selectedDragElement.id === 'incident-start') {
+            const newCx = mousePos.x - dragOffset.x1, newCy = mousePos.y - dragOffset.y1;
+            moved = incidentRay.tryMoveStart(newCx, newCy);
+        } else if (selectedDragElement.id === 'incident-end') {
+            const newCy = mousePos.y - dragOffset.y2;
+            moved = incidentRay.tryMoveEnd(newCy);
         } else {
             throw new Error('SVG Element not supported in drag.');
         }
 
         if (moved) {
+            incidentRay.draw();
             refraction.draw();
         }
     }
