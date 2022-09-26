@@ -12,6 +12,12 @@ class Prism {
     #prismElement;
 
     /**
+     * Gets the angle of the prism in rad (60deg).
+     */
+    #angle = Math.PI / 3;
+    #angleTan = Math.tan(this.#angle);
+
+    /**
      * 
      * @param {number} topX 
      * @param {number} topY 
@@ -26,20 +32,6 @@ class Prism {
     }
 
     /**
-     * Gets the angle of the prism in rad (60deg).
-     */
-    static get angle() {
-        return Math.PI / 3;
-    }
-
-    /**
-     * Gets the Math.tan() of the prism angle
-     */
-    static get angleTan() {
-        return Math.tan(Math.PI / 3);
-    }
-
-    /**
      * Gets the bottom y position of the prism.
      */
     get bottomY() {
@@ -50,14 +42,14 @@ class Prism {
     * Gets the bottom right position of the prism.
     */
     get bottomRightPos() {
-        return { x: this.topX + this.height / Prism.angleTan, y: this.topY + this.height }
+        return { x: this.topX + this.height / this.#angleTan, y: this.topY + this.height }
     }
 
     /**
     * Gets the bottom left position of the prism.
     */
     get bottomLeftPos() {
-        return { x: this.topX - this.height / Prism.angleTan, y: this.topY + this.height }
+        return { x: this.topX - this.height / this.#angleTan, y: this.topY + this.height }
     }
 
     /**
@@ -67,7 +59,7 @@ class Prism {
      */
     getXPosOnLeftSide(yPos) {
         return yPos > this.bottomY || yPos < this.topY ?
-            -1 : this.topX - ((yPos - this.topY) / Prism.angleTan);
+            -1 : this.topX - ((yPos - this.topY) / this.#angleTan);
     }
 
     /**
