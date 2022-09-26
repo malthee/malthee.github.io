@@ -118,7 +118,7 @@ class IncidentRay {
         let y1 = this.#startPos.y,
             y2 = this.#endPos.y,
             x1 = this.#startPos.x,
-            x2 = this.#endPos.y;
+            x2 = this.#endPos.x;
 
         // Angle of line is calculated through its slope defined by the two points. 
         const baseAngle = Math.atan((y2 - y1) / (x2 - x1));
@@ -431,11 +431,11 @@ class Refraction {
     const svg = document.getElementById('prism-svg');
     const prism = new Prism(150, 0, 100, document.getElementById('prism-glass'));
     prism.draw();
-    initEventHandling();
     const incidentRay = new IncidentRay(prism, document.getElementById('incident-start'), document.getElementById('incident-ray'), document.getElementById('incident-end'));
     incidentRay.draw();
     const refraction = new Refraction(incidentRay, prism, document.getElementById('prism-refraction'));
     refraction.draw();
+    initEventHandling();
     svg.classList.remove('d-none'); // Svg is fully drawn, able to display.
 
     function initEventHandling() {
