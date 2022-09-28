@@ -103,19 +103,16 @@ class IncidentRay {
         this.#endPos = { x: this.#prism.getXPosOnLeftSide(endPosY), y: endPosY };
     }
 
-    /**
-     * Gets the incident angle of the incident ray in rad.
-     */
-    get incidentAngle() {
-        let y1 = this.#startPos.y,
+    get rayAngle() {
+        const y1 = this.#startPos.y,
             y2 = this.#endPos.y,
             x1 = this.#startPos.x,
             x2 = this.#endPos.x;
 
         // Angle of line is calculated through its slope defined by the two points. 
         const baseAngle = Math.atan((y2 - y1) / (x2 - x1));
-        // To get the incident angle along the prism normal 30 degrees is added and flipped if startX > endX.
-        return baseAngle * (x2 > x1 ? -1 : 1) + Math.PI / 6;
+        // Add difference to 90° when line start goes over end in x coordinates.
+        return (x2 > x1 ? baseAngle : Math.PI / 2 + (Math.PI / 2 + baseAngle));
     }
 
     get startPos() {
@@ -140,15 +137,30 @@ class IncidentRay {
     }
 
     #isEndPositionValid(x, y) {
-        // End has to be right of start.
-        return x > this.#startPos.x + this.beamWidth &&
-            // And only between the prism coordinates.
-            y > this.#prism.topY + this.beamWidth / 2 && y < this.#prism.bottomY - this.beamWidth / 2;
+        // End has to be on prism side.
+        return y > this.#prism.topY + this.beamWidth / 2 && y < this.#prism.bottomY - this.beamWidth / 2;
     }
 
     #isStartPositionValid(x, y) {
         // Start has to be left of infinite prism left side.
         return x < this.#prism.bottomLeftPos.x - ((this.#prism.topX - this.#prism.bottomLeftPos.x) / (this.#prism.bottomY - this.#prism.topY)) * (y - this.#prism.bottomY);
+    }
+
+    /**
+     * Gets the incident angle depending on the direction the ray is facing.
+     * @param {['right, bottom']} direction which the ray is traveling to from the left side.
+     * @returns 
+     */
+    getIncidentAngle(direction) {
+        // To move the angle on the normal of the prism.
+        switch (direction) {
+            case 'bottom':
+                return this.rayAngle * -1 - Math.PI / 6;
+            case 'right':
+                return this.rayAngle * -1 + Math.PI / 6;
+            default:
+                throw new Error('Direction not supported by getIncidentAngle');
+        }
     }
 
     /**
@@ -287,13 +299,15 @@ class Refraction {
     /**
      * Gets the out angle for a specific refraction index normalized for display angle.
      * @param {number} n refraction index
+     * @param {['bottom', 'right']} direction for the direction
      */
-    #outAngleNormalized(n) {
-        const sinIncident = Math.sin(this.#incidentRay.incidentAngle);
+    #outAngleNormalized(n, direction) {
+        const incidentAngle = this.#incidentRay.getIncidentAngle(direction);
+        const sinIncident = Math.sin(incidentAngle);
         const angle = (Math.sqrt(3) / 2)
             * Math.sqrt(Math.pow(n, 2) - Math.pow(sinIncident, 2))
             - sinIncident / 2;
-        return angle - Math.PI / 6; // Adding 30 deg to inverse to get angle on canvas.
+        return angle - Math.PI / 6; // Adding -30 deg to get angle on canvas.
     }
 
     /**
@@ -301,7 +315,7 @@ class Refraction {
      * @param {number} n refraction index
      */
     #refractionAngleNormalized(n) {
-        return Math.asin(Math.sin(this.#incidentRay.incidentAngle) / n)
+        return Math.asin(Math.sin(this.#incidentRay.getIncidentAngle('right')) / n)
             * -1 + Math.PI / 6;
     }
 
@@ -309,7 +323,7 @@ class Refraction {
      * Finds the point of intersection of the refracted ray with the right side of a prism if exists.
      * @param {{x, y}} rayStart start of refraction
      * @param {number} n refraction index 
-     * @returns {{x, y, onPrism}} position of intersection and if it is on the prism side
+     * @returns {{x, y, direction}} position of intersection and its direction
      */
     #findPrismExitPoint(rayStart, n) {
         // Ray may exit either bottom or right side of prism.  
@@ -320,13 +334,15 @@ class Refraction {
             rayTargetDirection = { x: rayStart.x + 1, y: rayStart.y + Math.tan(this.#refractionAngleNormalized(n)) };
 
         // Check for bottom intersection first as it is closer to the ray, otherwise use right side intersection.
-        const bottomIntersection = this.#checkLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
-        const chosenIntersection = bottomIntersection.isIntersect ? bottomIntersection : this.#checkLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
+        const bottomIntersection = this.#findLineIntersection(rayStart, rayTargetDirection, bottomSideStart, bottomSideEnd);
+        const chosenIntersection = bottomIntersection.isIntersect ?
+            bottomIntersection :
+            this.#findLineIntersection(rayStart, rayTargetDirection, rightSideStart, rightSideEnd);
 
         return {
             x: chosenIntersection.x,
             y: chosenIntersection.y,
-            isBottom: bottomIntersection == chosenIntersection
+            direction: chosenIntersection === bottomIntersection ? 'bottom' : 'right'
         }
     }
 
@@ -339,7 +355,7 @@ class Refraction {
      * @param {{x, y}} line2EndPos 
      * @returns {{x, y, isIntersect}} position and flag if infinitely cast line 1 intersects line 2
      */
-    #checkLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
+    #findLineIntersection(line1StartPos, line1EndPos, line2StartPos, line2EndPos) {
         // If the lines intersect, the result contains the x and y of the intersection treating them as infinite lines.
         var denominator, a, b, numerator1, numerator2, result = {
             x: null,
@@ -384,7 +400,6 @@ class Refraction {
         // Refraction inside of the prism.
         const redPrismEnd = this.#findPrismExitPoint(refractionStart, this.#nRed),
             violetPrismEnd = this.#findPrismExitPoint(refractionEnd, this.#nViolet);
-        // TODO verify and fix drawing refraction on bottom of prism
 
         const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
             refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
@@ -393,8 +408,8 @@ class Refraction {
 
         // Refraction outside of the prism ends at width of the viewport.
         const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
-        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nRed)) },
-            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nViolet)) }
+        const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nRed, redPrismEnd.direction)) },
+            violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nViolet, violetPrismEnd.direction)) }
         const endDeviationY = (violetEnd.y - redEnd.y) / 7;
 
         for (let i = 0; i < this.#refractions.length; i++) {
