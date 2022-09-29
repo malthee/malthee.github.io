@@ -147,6 +147,55 @@ class IncidentRay {
     }
 
     /**
+     * Checks if the point x, y is located in the bounds of the box.
+     * @param {number} x 
+     * @param {number} y 
+     * @param {SVGRect} box 
+     * @returns {bool}
+     */
+    #isInBBox(x, y, box) {
+        return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
+    }
+
+    /**
+     * Finds the closest ray element to the provided position. If nothing is in range returns null.
+     * @param {number} x 
+     * @param {number} y
+     * @returns {SVGElement} closest element or null.
+     */
+    findClosestRayElement(x, y) {
+        const rayBox = this.#rayElement.getBBox();
+        const startBox = this.#startElement.getBBox();
+        const endBox = this.#endElement.getBBox();
+        // Ray has padding around height.
+        const fourBeams = this.beamWidth * 4;
+        const twoBeams = this.beamWidth * 2;
+        rayBox.height += fourBeams;
+        rayBox.y -= twoBeams;
+        // Start and end get padding all around.
+        startBox.y -= twoBeams;
+        startBox.x -= twoBeams;
+        startBox.width = fourBeams;
+        startBox.height = fourBeams;
+        endBox.y -= twoBeams;
+        endBox.x -= twoBeams;
+        endBox.width = fourBeams;
+        endBox.height = fourBeams;
+
+        let res = null;
+        // Check start and end first.
+        if (this.#isInBBox(x, y, startBox)) {
+            res = this.#startElement;
+        } else if (this.#isInBBox(x, y, endBox)) {
+            res = this.#endElement;
+        } else if (this.#isInBBox(x, y, rayBox)) {
+            res = this.#rayElement;
+        }
+
+        return res;
+    }
+
+    /**
      * Gets the incident angle depending on the direction the ray is facing.
      * @param {['right, bottom']} direction which the ray is traveling to from the left side.
      * @returns 
@@ -473,19 +522,23 @@ class Refraction {
     }
 
     function startDrag(evt) {
+        const mousePos = getMousePosition(evt);
         if (!evt.target.classList.contains('draggable')) {
-            return;
-        }
+            // Check if any draggable element is close, select it. Useful for mobile and small elements.
+            selectedDragElement = incidentRay.findClosestRayElement(mousePos.x, mousePos.y);
 
-        selectedDragElement = evt.target;
-        let mousePos = getMousePosition(evt);
+            if (selectedDragElement === null) {
+                return;
+            }
+        } else {
+            selectedDragElement = evt.target;
+        }
 
         // Track offset for start and end positions of line.
         dragOffset.y1 = mousePos.y - incidentRay.startPos.y;
         dragOffset.y2 = mousePos.y - incidentRay.endPos.y;
         dragOffset.x1 = mousePos.x - incidentRay.startPos.x;
         dragOffset.x2 = mousePos.x - incidentRay.endPos.x;
-
     }
 
     function drag(evt) {
