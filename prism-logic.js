@@ -356,7 +356,9 @@ class Refraction {
         const angle = (Math.sqrt(3) / 2)
             * Math.sqrt(Math.pow(n, 2) - Math.pow(sinIncident, 2))
             - sinIncident / 2;
-        return angle - Math.PI / 6; // Adding -30 deg to get angle on canvas.
+        // Adjusting angle for display, TODO check this for correctness
+        const res = direction == 'right' ? angle - Math.PI / 6 : (angle - Math.PI / 2) * Math.PI;
+        return res;
     }
 
     /**
@@ -441,6 +443,7 @@ class Refraction {
     draw() {
         const rayEnd = this.#incidentRay.endPos;
         const halfBeamWidth = this.#incidentRay.beamWidth / 2;
+        const colorCount = this.#refractions.length;
         // Since the beam is thick the top part will be used to calculate red, bottom part violet.
         const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
         const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
@@ -450,16 +453,16 @@ class Refraction {
         const redPrismEnd = this.#findPrismExitPoint(refractionStart, this.#nRed),
             violetPrismEnd = this.#findPrismExitPoint(refractionEnd, this.#nViolet);
 
-        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / 7,
-            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / 7,
-            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / 7,
-            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / 7;
+        const refractStartDeviationX = (refractionEnd.x - refractionStart.x) / colorCount,
+            refractStartDeviationY = (refractionEnd.y - refractionStart.y) / colorCount,
+            refractEndDeviationX = (violetPrismEnd.x - redPrismEnd.x) / colorCount,
+            refractEndDeviationY = (violetPrismEnd.y - redPrismEnd.y) / colorCount;
 
         // Refraction outside of the prism ends at width of the viewport.
         const endX = this.#refractionGroup.viewportElement.viewBox.baseVal.width;
         const redEnd = { x: endX, y: redPrismEnd.y + (endX - redPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nRed, redPrismEnd.direction)) },
             violetEnd = { x: endX, y: violetPrismEnd.y + (endX - violetPrismEnd.x) * Math.tan(this.#outAngleNormalized(this.#nViolet, violetPrismEnd.direction)) }
-        const endDeviationY = (violetEnd.y - redEnd.y) / 7;
+        const endDeviationY = (violetEnd.y - redEnd.y) / colorCount;
 
         for (let i = 0; i < this.#refractions.length; i++) {
             const refraction = this.#refractions[i];
