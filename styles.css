@@ -14,10 +14,51 @@ body {
 
 #prism-glass {
     filter: drop-shadow(0 0 1pt rgba(255, 255, 255, 0.75));
+    cursor: pointer;
+    transition: 0.5s;
+}
+
+#prism-glass:hover {
+    stroke-width: 2.5;
 }
 
 #prism-refraction {
     filter: blur(0.6pt);
+}
+
+#settings-container {
+    bottom: -500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    transition: 2s;
+}
+
+#settings-container.move-in {
+    bottom: 0;
+}
+
+#settings {
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    background-color: rgba(255, 255, 255, 0.70);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+}
+
+#button-close-settings {
+    border-radius: 33%;
+    padding: 0;
+    margin-bottom: 5px;
+    align-self: flex-end;
+    font-size: large;
+    border: none;
+    background-color: transparent;
+    color: black;
 }
 
 .glow {
@@ -28,7 +69,7 @@ body {
     cursor: move;
 }
 
-.d-none{
+.d-none {
     display: none !important;
 }
 
@@ -37,6 +78,16 @@ body {
     height: 20px;
     color: darkred;
     text-align: center;
+}
+
+.setting {
+    display: inline-flex;
+    gap: 10px;
+    padding-bottom: 5px;
+}
+
+input[type="range"] {
+    width: 150px;
 }
 
 @keyframes glow-animation {
