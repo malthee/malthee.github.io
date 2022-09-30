@@ -85,6 +85,10 @@ class IncidentRay {
     #rayElement
     #endElement
 
+    /** Expands the hitbox where elements can be found.  */
+    #hitRange = 12;
+    #doubleHitRange = this.#hitRange * 2;
+
     /**
      * 
      * @param {Prism} prism 
@@ -167,20 +171,18 @@ class IncidentRay {
         const rayBox = this.#rayElement.getBBox();
         const startBox = this.#startElement.getBBox();
         const endBox = this.#endElement.getBBox();
-        // Ray has padding around height.
-        const fourBeams = this.beamWidth * 4;
-        const twoBeams = this.beamWidth * 2;
-        rayBox.height += fourBeams;
-        rayBox.y -= twoBeams;
+
+        rayBox.height += this.#doubleHitRange;
+        rayBox.y -= this.#hitRange;
         // Start and end get padding all around.
-        startBox.y -= twoBeams;
-        startBox.x -= twoBeams;
-        startBox.width = fourBeams;
-        startBox.height = fourBeams;
-        endBox.y -= twoBeams;
-        endBox.x -= twoBeams;
-        endBox.width = fourBeams;
-        endBox.height = fourBeams;
+        startBox.y -= this.#hitRange;
+        startBox.x -= this.#hitRange;
+        startBox.width = this.#doubleHitRange;
+        startBox.height = this.#doubleHitRange;
+        endBox.y -= this.#hitRange;
+        endBox.x -= this.#hitRange;
+        endBox.width = this.#doubleHitRange;
+        endBox.height = this.#doubleHitRange;
 
         let res = null;
         // Check start and end first.
