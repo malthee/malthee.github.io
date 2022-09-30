@@ -21,6 +21,27 @@
 <body>
     <noscript class="warning">Sorry this page only works on modern browsers and with JavaScript enabled.</noscript>
     <p id="browser-unsupported" class="warning">Your browser is not able to display this content.</p>
+    <div id="settings-container">
+        <div id="settings">
+            <button id="button-close-settings">&times;</button>
+            <div class="setting">
+                <label for="range-a" title="A constant of Cauchy's equation.">Material A</label>
+                <input type="range" name="range-a" id="range-a" step="0.01" min="1" max="2">
+                <span id="value-a">n/a</span>
+            </div>
+            <div class="setting">
+                <label for="range-b" title="B constant of Cauchy's equation. Value adjusted by 1.000">Material B</label>
+                <input type="range" name="range-b" id="range-b" step="0.01" min="0.01" max="100">
+                <span id="value-b">n/a</span>
+            </div>
+            <div class="setting">
+                <label for="range-ray" title="Width of the light ray.">Ray width</label>
+                <input type="range" name="range-ray" id="range-ray" step="0.1" min="1" max="20">
+                <span id="value-ray">n/a</span>
+            </div>
+            <small>&#9432; Values used to calculate the refractive index</small>
+        </div>
+    </div>
     <svg id="prism-svg" class="d-none" viewBox="0,0,300,120" xmlns="http://www.w3.org/2000/svg" xml:lang="en">
         <g id="prism-refraction">
             <polygon id="refraction-red" fill="red" />
@@ -42,27 +63,6 @@
             </ellipse>
         </g>
     </svg>
-    <div id="settings-container">
-        <div id="settings">
-            <button id="button-close-settings">&times;</button>
-            <div class="setting">
-                <label for="range-a">Material A</label>
-                <input type="range" name="range-a" id="range-a">
-                <span id="value-a">0.005</span>
-            </div>
-            <div class="setting">
-                <label for="range-b">Material B</label>
-                <input type="range" name="range-b" id="range-b">
-                <span id="value-b">100.5</span>
-            </div>
-            <div class="setting">
-                <label for="range-ray">Ray width</label>
-                <input type="range" name="range-ray" id="range-ray">
-                <span id="value-c">100.5</span>
-            </div>
-            <small>Values used to calculate the refractive index.</small>
-        </div>
-    </div>
     <script src="prism-logic.js" async defer></script>
 
 </body>

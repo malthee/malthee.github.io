@@ -130,10 +130,10 @@ class IncidentRay {
     set beamWidth(value) {
         this.#rayElement.setAttribute('stroke-width', value);
         const r = value / 2 + 0.5;
-        this.#startElement.setAttribute('cx', r);
-        this.#startElement.setAttribute('cy', r);
-        this.#endElement.setAttribute('cx', r);
-        this.#endElement.setAttribute('cy', r);
+        this.#startElement.setAttribute('rx', r);
+        this.#startElement.setAttribute('ry', r);
+        this.#endElement.setAttribute('rx', r);
+        this.#endElement.setAttribute('ry', r);
     }
 
     #isEndPositionValid(x, y) {
@@ -444,7 +444,7 @@ class Refraction {
         const rayEnd = this.#incidentRay.endPos;
         const halfBeamWidth = this.#incidentRay.beamWidth / 2;
         const colorCount = this.#refractions.length;
-        // Since the beam is thick the top part will be used to calculate red, bottom part violet.
+        // The beam top part will be used to calculate red, bottom part violet.
         const beamStartY = rayEnd.y - halfBeamWidth, beamEndY = rayEnd.y + halfBeamWidth;
         const refractionStart = { x: this.#prism.getXPosOnLeftSide(beamStartY), y: beamStartY },
             refractionEnd = { x: this.#prism.getXPosOnLeftSide(beamEndY), y: beamEndY };
@@ -478,17 +478,19 @@ class Refraction {
 }
 
 (function () {
+    // Remove fallback content if JavaScript could not be executed.
+    document.getElementById('browser-unsupported').classList.add('d-none');
+
     /**
     * @type {SVGElement}
     */
     let selectedDragElement = null;
     let dragOffset = { x1: 0, x2: 0, y1: 0, y2: 0 };
-
-    // Remove fallback content if JavaScript could not be executed.
-    document.getElementById('browser-unsupported').classList.add('d-none');
-
     const svg = document.getElementById('prism-svg');
-    const prism = new Prism(150, 0, 100, document.getElementById('prism-glass'));
+    const settingsContainer = document.getElementById('settings-container');
+    const prismGlass = document.getElementById('prism-glass');
+
+    const prism = new Prism(150, 0, 100, prismGlass);
     prism.draw();
     const incidentRay = new IncidentRay(prism, document.getElementById('incident-start'), document.getElementById('incident-ray'), document.getElementById('incident-end'));
     incidentRay.draw();
@@ -496,7 +498,11 @@ class Refraction {
     refraction.draw();
     initEventHandling();
     svg.classList.remove('d-none'); // Svg is fully drawn, able to display.
+    initSettings();
 
+    /**
+     * Initializes the event handling for SVG elements.
+     */
     function initEventHandling() {
         // Event handling of incident ray movement
         svg.addEventListener('mousedown', startDrag);
@@ -510,6 +516,57 @@ class Refraction {
         svg.addEventListener('touchcancel', endDrag);
     }
 
+    /**
+     * Initializes the textDisplay and sets up a one-way-bind between the input value and textDisplay.
+     * @param {HTMLInputElement} input 
+     * @param {HTMLElement} textDisplay 
+     * @param {number} initialValue 
+     * @param {Function} valueSetter 
+     */
+    function bindSetting(input, textDisplay, initialValue, valueSetter) {
+        textDisplay.innerText = initialValue;
+        input.value = initialValue;
+
+        input.addEventListener('input', () => {
+            textDisplay.innerText = input.value;
+            valueSetter();
+            refraction.draw();
+        });
+    }
+
+    /**
+     * Initializes the binding of settings and event handling.
+     */
+    function initSettings() {
+        const rangeA = document.getElementById('range-a'),
+            valueA = document.getElementById('value-a'),
+            rangeB = document.getElementById('range-b'),
+            valueB = document.getElementById('value-b'),
+            rangeRay = document.getElementById('range-ray'),
+            valueRay = document.getElementById('value-ray');
+
+        const bValueMult = 1000; // Adjusted B for easier display.
+        bindSetting(rangeRay, valueRay, incidentRay.beamWidth, () => incidentRay.beamWidth = parseFloat(rangeRay.value));
+        bindSetting(rangeA, valueA, refraction.prismAConstant, () => refraction.prismAConstant = parseFloat(rangeA.value));
+        bindSetting(rangeB, valueB, refraction.prismBConstant * bValueMult, () => refraction.prismBConstant = parseFloat(rangeB.value) / bValueMult);
+
+        prismGlass.addEventListener('click', toggleSettings);
+        document.getElementById('button-close-settings').addEventListener('click', closeSettings);
+    }
+
+    function toggleSettings() {
+        settingsContainer.classList.toggle('move-in');
+    }
+
+    function closeSettings() {
+        settingsContainer.classList.remove('move-in');
+    }
+
+    /**
+     * Gets the current mouse or first touch position.
+     * @param {MouseEvent} evt 
+     * @returns coordinates
+     */
     function getMousePosition(evt) {
         var CTM = svg.getScreenCTM();
 
@@ -524,6 +581,11 @@ class Refraction {
         };
     }
 
+    /**
+     * Tries to start dragging a SVG element near to the mouse position. 
+     * @param {MouseEvent} evt 
+     * @returns 
+     */
     function startDrag(evt) {
         const mousePos = getMousePosition(evt);
         if (!evt.target.classList.contains('draggable')) {
@@ -544,6 +606,11 @@ class Refraction {
         dragOffset.x2 = mousePos.x - incidentRay.endPos.x;
     }
 
+    /**
+     * Drags the currently selected SVG element and redraws the light going through the prism.
+     * @param {MouseEvent} evt 
+     * @returns 
+     */
     function drag(evt) {
         if (!selectedDragElement) {
             return;
