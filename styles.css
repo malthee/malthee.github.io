@@ -23,7 +23,7 @@ body {
 }
 
 #prism-refraction {
-    filter: blur(0.6pt);
+    filter: blur(0.5px);
 }
 
 #settings-container {
