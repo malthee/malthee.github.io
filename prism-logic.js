@@ -366,6 +366,7 @@ class Refraction {
      * @param {number} n refraction index
      */
     #refractionAngleNormalized(n) {
+        // For internal refraction it is sufficient to only use the incident angle for rays going right.
         return Math.asin(Math.sin(this.#incidentRay.getIncidentAngle('right')) / n)
             * -1 + Math.PI / 6;
     }
