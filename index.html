@@ -7,6 +7,8 @@
     <title>malthee.github.io Prism</title>
     <meta name="description" content="A prism sim inspired by Pink Floyd">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:title" content="malthee.github.io Prism" />
+    <meta property="og:description" content="Prism light simulation" />
     <meta property="og:url" content="https://malthee.github.io/">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://malthee.github.io/img/prismLight.png">
@@ -40,9 +42,29 @@
             </ellipse>
         </g>
     </svg>
+    <div id="settings-container">
+        <div id="settings">
+            <button id="button-close-settings">&times;</button>
+            <div class="setting">
+                <label for="range-a" title="A constant of Cauchy's equation.">Material A</label>
+                <input type="range" name="range-a" id="range-a" step="0.01" min="1" max="2">
+                <span id="value-a">n/a</span>
+            </div>
+            <div class="setting">
+                <label for="range-b" title="B constant of Cauchy's equation. Value adjusted by 1.000">Material B</label>
+                <input type="range" name="range-b" id="range-b" step="0.01" min="0.01" max="100">
+                <span id="value-b">n/a</span>
+            </div>
+            <div class="setting">
+                <label for="range-ray" title="Width of the light ray.">Ray width</label>
+                <input type="range" name="range-ray" id="range-ray" step="0.1" min="1" max="15">
+                <span id="value-ray">n/a</span>
+            </div>
+            <small>&#9432; Values used to calculate the refractive index</small>
+        </div>
+    </div>
     <script src="prism-logic.js" async defer></script>
 
 </body>
 
 </html>
-

@@ -14,10 +14,61 @@ body {
 
 #prism-glass {
     filter: drop-shadow(0 0 1pt rgba(255, 255, 255, 0.75));
+    transition: 0.5s;
+    cursor: pointer;
+}
+
+#prism-glass:hover {
+    stroke-width: 2.5;
 }
 
 #prism-refraction {
-    filter: blur(0.6pt);
+    filter: blur(0.5px);
+}
+
+#settings-container {
+    bottom: -250px;
+    width: 100%;
+    transition: 1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    /* Container should be click through to allow svg events. */
+    pointer-events: none;
+}
+
+#settings-container.move-in {
+    bottom: 0;
+}
+
+#settings {
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    padding: 15px;
+    gap: 5px;
+    background-color: rgba(255, 255, 255, 0.70);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: all;
+}
+
+/* Numeric display */
+#settings span {
+    width: 40px;
+}
+
+#button-close-settings {
+    border-radius: 33%;
+    padding: 0;
+    margin-bottom: 5px;
+    color: black;
+    align-self: flex-end;
+    font-size: large;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
 }
 
 .glow {
@@ -28,15 +79,24 @@ body {
     cursor: move;
 }
 
-.d-none{
+.d-none {
     display: none !important;
 }
 
 .warning {
-    display: block;
     height: 20px;
+    display: block;
     color: darkred;
     text-align: center;
+}
+
+.setting {
+    display: inline-flex;
+    gap: 5px;
+}
+
+input[type="range"] {
+    width: 150px;
 }
 
 @keyframes glow-animation {
